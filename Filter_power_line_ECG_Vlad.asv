@@ -3,7 +3,7 @@
 %filter options
 LPF_cutoff = 25; %ECG signal band => between 10 Hz and 25 Hz
 HPF_cutoff = 1; % Baseline wander frequency is lower than 1Hz. Can be higher in special conditions (running)
-LMS_conv = 0.009;
+LMS_conv = 0.004;
 
 % noise amplitudes
 Noise_amplitude = 0.020;
@@ -19,11 +19,7 @@ t=0:dt:16;
 
 ref = sin(2*pi*f_interference*t);
 
-
-f_offset1 = 0;
-f_offset2 = 0;
-interference_noise = Mains_interference_amplitude * sin (2*pi*(f_interference-f_offset1)*t) + ...
-                     Mains_interference_amplitude * 0.2 *sin(2*pi*(f_interference-f_offset2)*t);
+interference_noise = Mains_interference_amplitude * sin (2*pi*f_interference*t) + Mains_interference_amplitude *  *sin(2*pi*3*f_interference*t);
 
 Hearth_rate = 75;
 ECG_period = Hearth_rate/60;
@@ -125,11 +121,6 @@ for i=n+1:length(t)
     h = h + LMS_conv * ECG_ntap(i) * buffer;
 end
 
-%% smooth data - not mandatory, just for eye comparation
-% ECG_out  = smoothdata(ECG_out);
-% ECG_4tap = smoothdata(ECG_4tap);
-% ECG_ntap = smoothdata(ECG_ntap);
-%% plot
 % plot(t,phase_signal(1,:));
 % hold on
 % plot(t,leading_signal(1,:));
