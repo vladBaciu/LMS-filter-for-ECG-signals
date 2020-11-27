@@ -1,6 +1,6 @@
 %% Filter 50/60 Hz signal from ECG simulated data
 % This script demonstrate how to filter a noisy ECG signal. Over the simulated ECG signal is added baseband noise, white noise and power line hum.
-
+close all
 %% User controlled variables
 LPF_cutoff = 25; %ECG signal band => between 10 Hz and 25 Hz
 HPF_cutoff = 1; % Baseline wander frequency is lower than 1Hz. Can be higher in special conditions (running)
@@ -16,7 +16,7 @@ f_interference = 50.5; % power line frequency
 
 Fs = 50 * 16;  %sample rate
 dt=1/Fs;
-t=0:dt:16;
+t=0:dt:15;
 
 ref = sin(2*pi*f_interference*t);
 
@@ -34,32 +34,62 @@ QRS_complex_duration = 0.08; % QRS complex duration is between 0.08 - 0.12 secon
 PR_duration = 0.12;  % PR duration is between 0.12 -0.20 seconds
 QT_duration = 0.40; % QT duration is between 0.35 - 0.43 seconds
 
+%%
+% *Create QRS complex shape*
 QRS_t = 0:dt:QRS_complex_duration;
 QRS_f = 1/QRS_complex_duration;
 QRS_waveform = sin(2*pi*QRS_f/2*QRS_t).*(QRS_t<=QRS_complex_duration);
 
+%%
+% *Create PR interval shape*
 PR_t = 0:dt:PR_duration;
 PR_f = 1/PR_duration;
 PR_waveform = 0.2*sin(2*pi*PR_f/2*PR_t).*(PR_t<=PR_duration);
 
+%%
+% *Create QT interval shape*
 QT_t = 0:dt:QT_duration;
 QT_f = 1/QT_duration;
 QT_waveform = 0.2*sin(2*pi*QT_f/2*QT_t).*(QT_t<=QT_duration);
 
-%repeat QRS_waveform according to ECG_period.
+%%
+% *Create a vector that holds the exact location of the ECG pulse.*
 time_location = double(0==mod(t,ECG_period));
 
+%%
+% *Create PR interval with respect to QRS complex position*
 ECG_PR = conv(circshift(time_location,[0, -ceil(PR_duration/dt + PR_duration/(2*dt))]), PR_waveform);
 ECG_PR = ECG_PR(1:length(ECG_PR) - length(PR_waveform) + 1);
 
+%%
+% *Create QT interval with respect to QRS complex position*
 ECG_QT = conv(circshift(time_location,QT_duration/(2*dt)), QT_waveform);
 ECG_QT = ECG_QT(1:length(ECG_QT) - length(QT_waveform) + 1);
 
+%%
+% *Repeat QRS complex according to ECG_period.*
 ECG_waveform = conv(time_location, QRS_waveform);
+%%
+% *Merge signals PR_QRS_QT*
 ECG_waveform = ECG_waveform(1:length(ECG_waveform) - length(QRS_waveform) + 1) + ECG_PR + ECG_QT;
+
+%%
+% *Add signal noise: random noise, interference noise and baseline noise*
 ECG_waveform_noise = ECG_waveform + Noise_amplitude * randn(size(t));
 ECG_waveform_interference = ECG_waveform_noise + interference_noise;
 ECG_waveform_final = ECG_waveform_interference + Baseline_wander_amplitude * sin(2*pi*f_baseline*t);
+
+save('ecg_waveform.mat','ECG_waveform');
+
+Options = tfestOptions;           
+Options.Display = 'on';           
+Options.WeightingFilter = [];     
+                                   
+%tf2 = tfest(mydata, 6, 5, Options)
+%idd_data = iddata(ECG_waveform_noise,ECG_waveform,dt);
+% h = tf(tf1.Numerator,tf1.Denominator,dt);
+% 
+% lsim_out = lsim(h,ECG_waveform_final,t);
 
 %% Low pass filtering and high pass filtering
 [b,a] = butter(2, LPF_cutoff/(Fs/2));
@@ -91,8 +121,10 @@ b2 = 0;
 for i=5:length(t)
     
     ECG_out(i) = ECG_HPF(i) - (b1*ref(i) + b2*ref(i-4)) ; 
-    b1 = b1 + LMS_conv*ECG_out(i)*sign(ref(i));
-    b2 = b2 + LMS_conv*ECG_out(i)*sign(ref(i-4));
+    %b1 = b1 + LMS_conv*ECG_out(i)*sign(ref(i));
+    %b2 = b2 + LMS_conv*ECG_out(i)*sign(ref(i-4));
+    b1 = b1 + LMS_conv*ECG_out(i)*ref(i);
+    b2 = b2 + LMS_conv*ECG_out(i)*ref(i-4);
        
 end
 
@@ -127,9 +159,26 @@ end
 % ECG_4tap = smoothdata(ECG_4tap);
 % ECG_ntap = smoothdata(ECG_ntap);
 
+%% System identification
+
+%data = iddata(ECG_waveform_final,ECG_waveform,dt);
+%a = idtf(tf1.Numerator,tf1.Denominator);
+%y = sim(tf1,ECG_waveform);
+%sys = tfest(data,1);
+% num = sys.Numerator;
+% den = sys.den;
+% sys.Report
+
+% hz = tf(tf1.Numerator,tf1.Denominator, Fs)
+% [y,t]=lsim(hz,ECG_waveform_final);
+% stem(t,y);
+
 %% Output plots
 %%
 % *ECG signal filtering when interference frequency is equal to reference signal 50/60Hz*
+
+% figure
+% plot(t,lsim_out);
 figure
 subplot(4,1,1);
 plot(t,ECG_waveform_final);
@@ -151,12 +200,34 @@ hold on
 plot(t,ECG_ntap,'black');
 legend('Filtered signal 2LMS','Simulated signal', 'Filtered signal 4LMS', 'Filtered signal NLMS');
 set(gcf,'Position',[380 80 800 680]);
-saveas(gcf,'ECG_filtering.png');
+%saveas(gcf,'ECG_filtering.png');
 
 
-%%
-% *ECG signal filtering when interference frequency has an offset of 5 and NLMS has 200 taps*
+
+
+%% ARIMA
+
+% sys = ar(ECG_waveform,4);
+% covar = sys.Report.Parameters.FreeParCovariance;
+
+y = iddata(ECG_waveform');
+z = iddata(ECG_waveform_final')
+
+figure
+sys_b = ar(z,20,'burg');
+sys_fb = ar(y,4);
+compare(y,sys_b,4);
+figure
+spectrum(sys_b,sys_fb)
+figure
+sys = ar(ECG_waveform_final,4,'ls');
+compare(y,sys,4);
+
 %%
 % 
+%%
+%
+%
+%
 % <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\ECG_N_tap_filter.png>>
 % 
