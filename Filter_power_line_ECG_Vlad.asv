@@ -72,7 +72,7 @@ ref = sin(2*pi*f_interference*t);
 % of the 50/60 Hz signal.
 
 h = 0;
-f_offset1 = 0.7; % The maximum value should be +/- 0.2 Hz
+f_offset1 = 0.2; % The maximum value should be +/- 0.2 Hz
 f_offset2 = 0; % The maximum value should be +/- 0.2 Hz
 interference_noise = Mains_interference_amplitude * sin (2*pi*(f_interference-f_offset1)*t) + ...
                      h * Mains_interference_amplitude * 0.2 *sin(2*pi*(3*f_interference-f_offset2)*t);
@@ -232,7 +232,7 @@ for i=13:length(t)
 end
 
 %% LMS n taps
-%figure
+
 n = 20;
 h = zeros(1,n+1);
 offset = 0:-1:-n;
@@ -243,26 +243,8 @@ for i=n+1:length(t)
     h = h + LMS_conv * ECG_ntap(i) * buffer;
 end
 
-%plot(t,ECG_ntap,'red');
-
-n = 200;
-h = zeros(1,n+1);
-offset = 0:-1:-n;
-for i=n+1:length(t)
-    % keep a history buffer
-    buffer = ref(i+offset);
-    ECG_ntap(i) = ECG_HPF(i) - dot(h,buffer);
-    h = h + LMS_conv * ECG_ntap(i) * buffer;
-end
-%hold on
-%plot(t,ECG_ntap,'black');
 %%
-% The tap order of the filter can reduce the frequency offset of the
-% interference noise. For instance, for a f_offset of 0.7 Hz the output of
-% a 200 tap filter and a 20 tap filter can be seen bellow:
-%
-% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\html\LMS_ntap.png>>
-%
+% The tap order of the filter can
 
 % smoothdata - not mandatory, just for eye comparation
 % ECG_out  = smoothdata(ECG_out);
