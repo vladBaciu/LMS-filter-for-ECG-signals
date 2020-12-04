@@ -72,8 +72,8 @@ ref = sin(2*pi*f_interference*t);
 % of the 50/60 Hz signal.
 
 h = 0;
-f_offset1 = 0.7; % The maximum value should be +/- 0.2 Hz
-f_offset2 = 0; % The maximum value should be +/- 0.2 Hz
+f_offset1 = 0.0; % The maximum value should be +/- 0.2 Hz
+f_offset2 = 0.0; % The maximum value should be +/- 0.2 Hz
 interference_noise = Mains_interference_amplitude * sin (2*pi*(f_interference-f_offset1)*t) + ...
                      h * Mains_interference_amplitude * 0.2 *sin(2*pi*(3*f_interference-f_offset2)*t);
 
@@ -150,11 +150,25 @@ axis([2 6 0 2])
 
 %%
 % *Add signal noise: random noise, interference noise and baseline noise*
-ECG_waveform_noise = ECG_waveform + Noise_amplitude * randn(size(t));
-ECG_waveform_interference = ECG_waveform_noise + interference_noise;
-ECG_waveform_final = ECG_waveform_interference + Baseline_wander_amplitude * sin(2*pi*f_baseline*t);
 
+ECG_artifact = Noise_amplitude * randn(size(t)) + interference_noise + Baseline_wander_amplitude * sin(2*pi*f_baseline*t);
+ECG_waveform_final = ECG_waveform + ECG_artifact;
+
+F = 10e3;
+t1=0:dt:0.05;
+r1 = randi([1 10000],1,length(t));
+time_location = double(0==mod(r1,80));
+signal1 = 0.01 * sin(2*pi*900*t1) + 0.05 + 0.05 * randn(size(t1));
+
+signal = conv(time_location, signal1);
+signal = signal(1:length(signal) - length(signal1) + 1);
+
+ECG_validation_waveform = signal+ECG_waveform;
+%ECG_identification = ECG_waveform + signal;
 save('ecg_waveform.mat','ECG_waveform');
+figure
+plot(t,ECG_validation_waveform);
+axis([0 15 -1 2]);
 
 Options = tfestOptions;           
 Options.Display = 'on';           
@@ -215,6 +229,7 @@ for i=5:length(t)
     b2 = b2 + LMS_conv*ECG_out(i)*ref(i-4);
        
 end
+
 
 %% LMS 4 taps
 a1 = 0;
@@ -311,29 +326,46 @@ plot(t,ECG_ntap,'black');
 legend('Filtered signal 2LMS','Simulated signal', 'Filtered signal 4LMS', 'Filtered signal NLMS');
 set(gcf,'Position',[380 80 800 680]);
 %saveas(gcf,'ECG_filtering.png');
+%%
+%
+% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\N_tap_filter_f_offset_0.png>>
+%
+%%
+%
+% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\N_tap_filter_f_offset.png>>
+%
 
 
-
-
-%% ARIMA
+%% AR model
 
 % sys = ar(ECG_waveform,4);
 % covar = sys.Report.Parameters.FreeParCovariance;
 
 y = iddata(ECG_waveform');
 z = iddata(ECG_waveform_final')
-
+na = 1;
+nb = 1;
+nc = 1;
+nk = 1;
+sys_armax = armax(y,[4 1])
 figure
 sys = ar(ECG_waveform_final,4,'ls');
 compare(y,sys,4);
 figure
+compare(y,sys_armax,4);
+figure
 spectrum(sys)
 
-%%
-% 
-%%
-%
-%
-%
-% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\ECG_N_tap_filter.png>>
-% 
+
+
+%% ARMA
+Mdl = arima(1,0,1)
+EstMdl1 = estimate(Mdl,ECG_waveform');
+summarize(EstMdl1)
+EstMdl2 = estimate(Mdl,ECG_artifact');
+summarize(EstMdl2)
+
+% [y,e,v] = simulate(Mdl,100);
+% Z = e./sqrt(v);
+% [Y,E,V] = filter(Mdl,Z)
+% plot(t,Y);
