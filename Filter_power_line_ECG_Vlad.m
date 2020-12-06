@@ -33,7 +33,7 @@ LMS_conv = 0.009; % LMS convergence variable
 % Noise amplitudes for white noise, power line hum noise and baseline noise are
 % defined bellow:
 %
-Noise_amplitude = 0.020; 
+Noise_amplitude = 0.005; 
 Mains_interference_amplitude = 8;
 Baseline_wander_amplitude = 1;
 
@@ -154,8 +154,9 @@ axis([2 6 0 2])
 ECG_artifact = Noise_amplitude * randn(size(t)) + interference_noise + Baseline_wander_amplitude * sin(2*pi*f_baseline*t);
 ECG_waveform_final = ECG_waveform + ECG_artifact;
 
+%% Add electrode coupling noise
 F = 10e3;
-t1=0:dt:0.05;
+t1=0:dt:0.03;
 r1 = randi([1 10000],1,length(t));
 time_location = double(0==mod(r1,80));
 signal1 = 0.01 * sin(2*pi*900*t1) + 0.05 + 0.05 * randn(size(t1));
@@ -164,6 +165,7 @@ signal = conv(time_location, signal1);
 signal = signal(1:length(signal) - length(signal1) + 1);
 
 ECG_validation_waveform = signal+ECG_waveform;
+ECG_waveform_final = ECG_waveform_final + signal;
 %ECG_identification = ECG_waveform + signal;
 save('ecg_waveform.mat','ECG_waveform');
 figure
@@ -341,31 +343,53 @@ set(gcf,'Position',[380 80 800 680]);
 % sys = ar(ECG_waveform,4);
 % covar = sys.Report.Parameters.FreeParCovariance;
 
-y = iddata(ECG_waveform');
-z = iddata(ECG_waveform_final')
-na = 1;
-nb = 1;
-nc = 1;
-nk = 1;
-sys_armax = armax(y,[4 1])
-figure
-sys = ar(ECG_waveform_final,4,'ls');
-compare(y,sys,4);
-figure
-compare(y,sys_armax,4);
-figure
-spectrum(sys)
+% y = iddata(ECG_waveform');
+% z = iddata(ECG_waveform_final')
+% na = 1;
+% nb = 1;
+% nc = 1;
+% nk = 1;
+% sys_armax = armax(y,[4 1])
+% figure
 
-
-
-%% ARMA
-Mdl = arima(1,0,1)
-EstMdl1 = estimate(Mdl,ECG_waveform');
-summarize(EstMdl1)
-EstMdl2 = estimate(Mdl,ECG_artifact');
-summarize(EstMdl2)
-
-% [y,e,v] = simulate(Mdl,100);
-% Z = e./sqrt(v);
-% [Y,E,V] = filter(Mdl,Z)
-% plot(t,Y);
+% compare(y,sys,4);
+% figure
+% compare(y,sys_armax,4);
+% figure
+% spectrum(sys)
+% y = iddata(ECG_validation_waveform');
+% z = iddata((ECG_validation_waveform-ECG_waveform)')
+% 
+% 
+% sys = ar(ECG_waveform,4,'ls');
+% 
+% x1 = compare(z,sys,6)
+% x2 = compare(y,sys,4);
+% 
+% %t = iddata(t');
+% noise = x2.y' - ECG_waveform;
+% figure
+% plot(t,x1.y);
+% hold on
+% plot(t,signal);
+% figure
+% plot(t,x2.y);
+% hold on
+% plot(t,ECG_validation_waveform);
+% figure
+% plot(t,noise);
+% 
+% ECG_waveform = ECG_validation_waveform - noise;
+% figure
+% plot(t,ECG_waveform);
+% %% ARMA
+% Mdl = arima(1,0,1)
+% EstMdl1 = estimate(Mdl,ECG_waveform');
+% summarize(EstMdl1)
+% EstMdl2 = estimate(Mdl,ECG_artifact');
+% summarize(EstMdl2)
+% X = smooth(EstMdl1,ECG_waveform);
+% % [y,e,v] = simulate(Mdl,100);
+% % Z = e./sqrt(v);
+% % [Y,E,V] = filter(Mdl,Z)
+% % plot(t,Y);
