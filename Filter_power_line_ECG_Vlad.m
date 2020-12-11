@@ -166,21 +166,10 @@ signal = signal(1:length(signal) - length(signal1) + 1);
 
 ECG_validation_waveform = signal+ECG_waveform;
 ECG_waveform_final = ECG_waveform_final + signal;
-%ECG_identification = ECG_waveform + signal;
 save('ecg_waveform.mat','ECG_waveform');
 figure
 plot(t,ECG_validation_waveform);
 axis([0 15 -1 2]);
-
-Options = tfestOptions;           
-Options.Display = 'on';           
-Options.WeightingFilter = [];     
-                                   
-%tf2 = tfest(mydata, 6, 5, Options)
-%idd_data = iddata(ECG_waveform_noise,ECG_waveform,dt);
-% h = tf(tf1.Numerator,tf1.Denominator,dt);
-% 
-% lsim_out = lsim(h,ECG_waveform_final,t);
 
 %% Low pass filtering and high pass filtering
 
@@ -261,7 +250,6 @@ for i=n+1:length(t)
 end
 
 %plot(t,ECG_ntap,'red');
-
 n = 200;
 h = zeros(1,n+1);
 offset = 0:-1:-n;
@@ -271,41 +259,11 @@ for i=n+1:length(t)
     ECG_ntap(i) = ECG_HPF(i) - dot(h,buffer);
     h = h + LMS_conv * ECG_ntap(i) * buffer;
 end
-%hold on
-%plot(t,ECG_ntap,'black');
-%%
-% The tap order of the filter can reduce the frequency offset of the
-% interference noise. For instance, for a f_offset of 0.7 Hz the output of
-% a 200 tap filter and a 20 tap filter can be seen bellow:
-%
-% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\html\LMS_ntap.png>>
-%
-
-% smoothdata - not mandatory, just for eye comparation
-% ECG_out  = smoothdata(ECG_out);
-% ECG_4tap = smoothdata(ECG_4tap);
-% ECG_ntap = smoothdata(ECG_ntap);
-
-%% System identification
-
-%data = iddata(ECG_waveform_final,ECG_waveform,dt);
-%a = idtf(tf1.Numerator,tf1.Denominator);
-%y = sim(tf1,ECG_waveform);
-%sys = tfest(data,1);
-% num = sys.Numerator;
-% den = sys.den;
-% sys.Report
-
-% hz = tf(tf1.Numerator,tf1.Denominator, Fs)
-% [y,t]=lsim(hz,ECG_waveform_final);
-% stem(t,y);
 
 %% Output plots
 %%
 % *ECG signal filtering when interference frequency is equal to reference signal 50/60Hz*
 
-% figure
-% plot(t,lsim_out);
 figure
 subplot(4,1,1);
 plot(t,ECG_waveform_final);
@@ -337,8 +295,7 @@ set(gcf,'Position',[380 80 800 680]);
 % <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\N_tap_filter_f_offset.png>>
 %
 
-
-%% AR model
+%% Commented code
 
 % sys = ar(ECG_waveform,4);
 % covar = sys.Report.Parameters.FreeParCovariance;
@@ -393,3 +350,32 @@ set(gcf,'Position',[380 80 800 680]);
 % % Z = e./sqrt(v);
 % % [Y,E,V] = filter(Mdl,Z)
 % % plot(t,Y);
+
+%hold on
+%plot(t,ECG_ntap,'black');
+%%
+% The tap order of the filter can reduce the frequency offset of the
+% interference noise. For instance, for a f_offset of 0.7 Hz the output of
+% a 200 tap filter and a 20 tap filter can be seen bellow:
+%
+% <<D:\Facultate\VUB_sem1\Video,Image,Coding Systems\mini-project\Matlab\html\LMS_ntap.png>>
+%
+
+% smoothdata - not mandatory, just for eye comparation
+% ECG_out  = smoothdata(ECG_out);
+% ECG_4tap = smoothdata(ECG_4tap);
+% ECG_ntap = smoothdata(ECG_ntap);
+
+
+
+%data = iddata(ECG_waveform_final,ECG_waveform,dt);
+%a = idtf(tf1.Numerator,tf1.Denominator);
+%y = sim(tf1,ECG_waveform);
+%sys = tfest(data,1);
+% num = sys.Numerator;
+% den = sys.den;
+% sys.Report
+
+% hz = tf(tf1.Numerator,tf1.Denominator, Fs)
+% [y,t]=lsim(hz,ECG_waveform_final);
+% stem(t,y);

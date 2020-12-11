@@ -1,0 +1,38 @@
+close all
+N = 2048;
+randn( 'seed' ,2);
+dt = 0.05;
+t = [1: N ]* dt ;
+SNR = 2.0;
+yt = lsim ( -0.5 ,1 ,1 ,0 ,randn(1 , N )/ sqrt ( dt ),t ,0); 
+yn = yt + randn(1 , N )/ sqrt ( dt ) * sqrt ( yt *yt ’/ N) / ( SNR * sqrt ( dt ));
+y2= y;
+m = ceil(0.6* N + 1 )
+n = length(y) +1 - m;
+Y = zeros (m , n );
+sv_ratio = 0.15; 
+for k =1: m
+    Y ( k , : ) = y ( k :k +n -1 );
+end
+
+[U ,S ,V] = svd ( Y , 0 );
+f = find(diag(S)/ S(1 ,1) > sv_ratio );
+K = max(f);
+d1= diag(S)';
+
+
+d = diag(d1(1:K));
+v = V (:,1: K )';
+Y = U(:,1: K )*d* v;
+y = zeros (1 , N );
+y (1) = Y (1 ,1);
+for k =2: m
+    min_kn = min(k , n );
+    y(k ) = sum(diag(Y( k : -1:1 ,1: min_kn ))) / min_kn ;
+end
+
+for k =2: n
+    y(m +k -1) = sum(diag(Y( m : -1:m -n+k ,k:n ))) / (n -k +1);
+end
+figure
+plot (t , y)
